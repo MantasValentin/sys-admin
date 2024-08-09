@@ -14,7 +14,7 @@ sudo tee -a /etc/dhcp/dhcpd.conf > /dev/null <<EOT
 subnet 192.168.1.0 netmask 255.255.255.0 {
  range 192.168.1.100 192.168.1.200;
  option routers 192.168.1.1;
- option domain-name-server 192.168.1.1;
+ option domain-name-servers 192.168.1.1;
 }
 EOT
 
