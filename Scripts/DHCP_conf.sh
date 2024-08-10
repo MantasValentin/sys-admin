@@ -55,7 +55,7 @@ EOT
 sudo systemctl enable nftables
 sudo systemctl start nftables
 
-# Allow ipv4 routing
+# Allow ipv4 forwarding
 
 sudo sed -i "s/^#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/" /etc/sysctl.conf
 sudo sysctl -p
