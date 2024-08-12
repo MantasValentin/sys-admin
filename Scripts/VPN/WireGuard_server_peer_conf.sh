@@ -13,7 +13,6 @@ sudo tee -a /etc/wireguard/wg0.conf > /dev/null <<EOT
 [Peer]
 PublicKey = ${CLIENT_PUB_KEY}
 AllowedIPs = ${CLIENT_VPN_IP}
-
 EOT
 
 # Restart the service
