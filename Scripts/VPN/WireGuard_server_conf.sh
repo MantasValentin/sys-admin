@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # This script sets up the WireGuard server
 
 # Install WireGuard
@@ -20,16 +22,13 @@ sudo tee /etc/wireguard/wg0.conf > /dev/null <<EOT
 PrivateKey = ${PRIVATE_KEY}
 Address = ${SERVER_VPN_IP}
 ListenPort = 51820
-PostUp = nft add rule ip nat postrouting oifname ${NETWORK_INTERFACE} masquerade; nft add rule ip filter forward iifname "wg0" accept
-PostDown = nft delete rule ip nat postrouting oifname ${NETWORK_INTERFACE} masquerade; nft delete rule ip filter forward iifname "wg0" accept
-
 EOT
 
 # Configure firewall
 sudo nft add table inet filter
 sudo nft add chain inet filter input { type filter hook input priority 0 \; policy accept \; }
 sudo nft add rule inet filter input iif "wg0" accept
-sudo nft add chain inet filter forward { type filter hook forward priority 0 \; policy drop \; }
+sudo nft add chain inet filter forward { type filter hook forward priority 0 \; policy accept \; }
 sudo nft add rule inet filter forward iif "wg0" accept
 sudo nft add rule inet filter forward oif "wg0" accept
 sudo nft add chain inet filter output { type filter hook output priority 0 \; policy accept \; }

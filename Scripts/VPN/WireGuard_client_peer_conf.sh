@@ -14,8 +14,7 @@ sudo tee -a /etc/wireguard/wg0-client.conf > /dev/null <<EOT
 PublicKey = ${SERVER_PUB_KEY}
 Endpoint = ${SERVER_IP}:51820
 AllowedIPs = 0.0.0.0/0
-PersistentKeepalive = 30
-
+PersistentKeepalive = 25
 EOT
 
 # Restart the service
