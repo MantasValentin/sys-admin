@@ -44,3 +44,12 @@
 - sudo ip route del [destination]
 - sudo ip route del default via 192.168.4.1 dev enp0s8
 - sudo ip route del default
+
+
+### /etc/network/interfaces
+auto eth0
+iface eth0 inet static
+    address 192.168.1.10
+    netmask 255.255.255.0
+    up ip route add default via 192.168.1.1 dev eth0
+    up ip route add 10.0.0.0/8 via 192.168.1.254 dev eth0

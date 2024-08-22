@@ -1,5 +1,6 @@
 # Check partitions
 sudo df -h
+sudo lsblk
 sudo fdisk -l
 
 # Modify partitions
@@ -25,3 +26,6 @@ sudo mount /dev/sdXY /mnt/partition
 
 # Unmounting
 sudo umount /mnt/partition
+
+# Mount SWAP partition
+sudo swapon /dev/sdXY
