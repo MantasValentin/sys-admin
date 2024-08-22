@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Check if the correct number of arguments is provided
 if [ "$#" -ne 2 ]; then
     echo "Usage: $0 <SERVER_IP> <CLIENT_NAME>"
