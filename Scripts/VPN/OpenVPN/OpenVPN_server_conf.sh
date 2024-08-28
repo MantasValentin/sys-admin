@@ -35,6 +35,7 @@ sudo cp ./pki/ca.crt ./pki/issued/server.crt ./pki/private/server.key ./pki/dh.p
 
 # Create OpenVPN server configuration file
 sudo tee /etc/openvpn/server.conf > /dev/null <<EOT
+server 10.1.0.0 255.255.255.0
 port 1194
 proto udp
 dev tun
