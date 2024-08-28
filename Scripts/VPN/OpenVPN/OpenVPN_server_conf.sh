@@ -45,8 +45,6 @@ dh /etc/openvpn/server/dh.pem
 ca /etc/openvpn/server/ca.crt
 tls-auth /etc/openvpn/server/ta.key 0
 push "redirect-gateway def1 bypass-dhcp"
-push "dhcp-option DNS 8.8.8.8"
-push "dhcp-option DNS 8.8.4.4"
 keepalive 10 120
 user nobody
 group nogroup

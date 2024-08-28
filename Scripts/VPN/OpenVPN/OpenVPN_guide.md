@@ -110,3 +110,44 @@ cp ./client1.ovpn /etc/openvpn/client/
 
 # Start the vpn connection
 sudo openvpn --config /etc/openvpn/client/client1.ovpn --route-gateway 192.168.0.130
+
+
+
+
+
+
+
+
+
+
+
+# Generate a new key for the intermediate CA:
+sudo ./easyrsa gen-req intermediate-ca nopass
+
+# Sign the intermediate CA certificate with your root CA:
+sudo ./easyrsa sign-req ca intermediate-ca
+
+# Generate a key and certificate signing request for the server
+sudo ./easyrsa gen-req server nopass
+
+# Sign the server certificate using the intermediate CA
+sudo ./easyrsa sign-req server server
+
+# Generate Diffie-Hellman parameters
+sudo ./easyrsa gen-dh
+
+# Generate TLS-Auth key
+sudo openvpn --genkey secret ta.key
+
+# Generate a key and certificate signing request for a client
+sudo ./easyrsa gen-req client1 nopass
+
+# Sign the client certificate using the intermediate CA
+sudo ./easyrsa sign-req client client1
+
+
+
+
+sudo ./easyrsa build-client-full CLIENT_NAME nopass
+
+sudo ./easyrsa build-server-full SERVER_NAME nopass
