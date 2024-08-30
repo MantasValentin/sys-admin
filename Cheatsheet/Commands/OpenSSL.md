@@ -9,6 +9,8 @@ openssl x509 -req -in request.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out 
 
 
 
+
+# Setup for root CA intermediate CA and server crt
 #!/bin/bash
 
 # Step 1: Create Root CA
