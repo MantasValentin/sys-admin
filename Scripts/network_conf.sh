@@ -87,7 +87,7 @@ table inet filter {
         # tcp dport {80, 443} accept;  # HTTP/HTTPS
         # udp dport 53 accept;  # DNS
         # tcp dport 53 accept;  # DNS
-        # udp dport 67 accept;  # DHCP
+        # udp dport {67, 68} accept;  # DHCP
         # tcp dport 3306 accept;  # MySQL/MariaDB
         # tcp dport 5432 accept;  # PostgreSQL
         # tcp dport 27017 accept;  # MongoDB
@@ -116,44 +116,5 @@ table inet filter {
     }
 }
 EOT
-
-## Enable and start nftables service
-sudo systemctl enable nftables
-sudo systemctl start nftables
-
-# SSH server
-echo "Configuring SSH server"
-
-## SSH server configuration
-sudo awk '
-    /^#MaxAuthTries 6$/ { print "MaxAuthTries 3"; next }
-    /^#MaxSessions 10$/ { print "MaxSessions 2"; next }
-    /^X11Forwarding yes$/ { print "X11Forwarding no"; next }
-    /^#AllowAgentForwarding yes$/ { print "AllowAgentForwarding no"; next }
-    /^#AllowTcpForwarding yes$/ { print "AllowTcpForwarding no"; next }
-    /^#TCPKeepAlive yes$/ { print "TCPKeepAlive no"; next }
-    /^#Compression delayed$/ { print "Compression no"; next }
-    /^#ClientAliveCountMax 3$/ { print "ClientAliveCountMax 2"; next }
-    /^#LogLevel INFO$/ { print "LogLevel VERBOSE"; next }
-    /^#ClientAliveInterval 0$/ { print "ClientAliveInterval 300"; next }
-    /^#LoginGraceTime 2m$/ { print "LoginGraceTime 30s"; next }
-    { print }
-' /etc/ssh/sshd_config > /tmp/sshd_config.tmp 
-sudo mv /tmp/sshd_config.tmp /etc/ssh/sshd_config
-sudo rm -rf /tmp/sshd_config.tmp
-
-
-## Start SSH server 
-sudo systemctl enable ssh
-sudo systemctl start ssh
-
-# Fail2ban
-echo "Configuring Fail2ban"
-
-## Fail2ban configuration
-
-## Start Fail2ban
-sudo systemctl enable fail2ban
-sudo systemctl start fail2ban
 
 echo "Network configuration installation and configuration completed!"
