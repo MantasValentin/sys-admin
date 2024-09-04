@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This is a script for setting up a basic network configuration
+# This is a script for installing networking tools
 
 # Update and upgrade the system
 sudo apt-get update -y && DEBIAN_FRONTEND=noninteractive sudo apt-get upgrade -y -o Dpkg::Options::="--force-confnew"

@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# This is a script for setting up a basic network configuration
+# This is a script for setting up a basic firewall configuration
 
 # Update and upgrade the system
 sudo apt-get update -y && sudo apt-get upgrade -y
 
-# Install common networking software
+# Install nftables
 packages=(
     "nftables"               # Administration tool for packet filtering and NAT
 )

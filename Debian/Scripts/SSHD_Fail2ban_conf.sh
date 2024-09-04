@@ -1,5 +1,11 @@
+#!/bin/bash
+
+# This is a script for setting up ssh server with fail2ban
+
+# Update and upgrade the system
 sudo apt-get update -y && sudo apt-get upgrade -y
 
+# Install revelent software
 sudo apt-get install openssh-server nftables fail2ban -y
 
 # SSH server
