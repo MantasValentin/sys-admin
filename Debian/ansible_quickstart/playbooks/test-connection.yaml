@@ -1,0 +1,26 @@
+- name: Ensure all hosts are reachable
+  hosts: all
+  vars_files:
+    - ./../inventory/vars.yml
+  tasks:
+    - name: Ping all hosts
+      ping:
+
+- name: Ensure webservers are reachable
+  hosts: webservers
+  vars_files:
+    - ./../inventory/vars.yml
+  tasks:
+    - name: Ping webserver hosts
+      ping:
+
+- name: Ensure messaging functionality
+  hosts: databases
+  vars_files:
+    - ./../inventory/vars.yml
+  tasks:
+    - name: Send message
+      debug:
+        msg: "{{ message }}"
+
+

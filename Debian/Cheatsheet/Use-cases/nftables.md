@@ -107,13 +107,6 @@ table inet filter {
     chain input {
         type filter hook input priority filter; policy drop;
 
-        # Allow loopback
-        iifname "lo" accept;
-        # Allow established/related connections
-        ct state {established, related} accept;
-        # Drop invalid packets
-        ct state invalid log prefix "WARNING - Invalid Packet: " level warn drop;
-
         # DDoS protection (SYN flood), ip based rate limiting
         # ip saddr . ip protocol . tcp dport {
         #    limit rate 2/second burst 10 packets;
@@ -125,32 +118,6 @@ table inet filter {
         # Protect against port scanning partialy
         tcp flags & (fin|syn|rst|ack) == fin|syn|rst|ack log prefix "CRITICAL - Port Scan Detected: " level crit drop;
         tcp flags & (fin|syn|rst|ack) == 0 log prefix "CRITICAL - Port Scan Detected: " level crit drop;
-
-        # Ip based rate limiting for SSH connections
-        # ip saddr @trusted_ips tcp dport 22 ct state new limit rate 10/minute burst 10 packets accept; # doesn't work
-        tcp dport 22 ct state new limit rate 3/minute burst 5 packets log prefix "INFO - New SSH Connection: " level info accept;
-        tcp dport 22 log prefix "Warning - Failed SSH Connection: " level warn drop;
-
-        # Service ports (uncomment as needed)
-        # tcp dport {80, 443} accept;  # HTTP/HTTPS
-        # udp dport 53 accept;  # DNS
-        # tcp dport 53 accept;  # DNS
-        # udp dport {67, 68} accept;  # DHCP: 67 for server, 68 for client
-        # tcp dport 3306 accept;  # MySQL/MariaDB
-        # tcp dport 5432 accept;  # PostgreSQL
-        # tcp dport 27017 accept;  # MongoDB
-        # tcp dport 6379 accept;  # Redis
-        # tcp dport 1521 accept;  # Oracle
-        # tcp dport 1433 accept;  # Microsoft SQL Server
-        # tcp dport 9042 accept;  # Cassandra
-        # tcp dport { 5044, 5601, 9200, 9300} accept;  # Elasticsearch, Kibana, Logstash
-
-        # Allow ICMP (ping)
-        icmp type { echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept;
-        icmp type { echo-request, destination-unreachable, time-exceeded } log prefix "WARNING - High ICMP Rate: " level warn drop;
-
-        # Log dropped packets
-        log prefix "nftables-Dropped: " level debug drop;
     }
 }
 
@@ -160,198 +127,91 @@ table inet filter {
 flush ruleset
 
 table inet filter {
-	chain input {
+    # Set for recent IP addresses that have been flagged for port scanning
+    set port_scanners {
+        type ipv4_addr
+        size 65536
+        flags dynamic,timeout
+        timeout 10m
+    }
+
+    # Set for counting connection attempts per IP
+    set conn_counter {
+        type ipv4_addr
+        size 65536
+        flags dynamic,timeout
+        timeout 1m
+    }
+
+    # Trusted ip's for unrestricted connections
+    set trusted-ip {
+        type ipv4_addr
+        elements = { 0.0.0.0 }
+    }
+
+    chain input {
         type filter hook input priority filter; policy drop;
 
-        iifname "lo" accept # Accept any localhost traffic
-        ct state {established, related} accept # Accept traffic originated from us
-        ct state invalid log prefix "WARNING - Invalid Packet: " level warn drop # Drop invalid packets
+        # Accept any localhost traffic
+        iifname "lo" accept 
+        # Accept traffic originated from us
+        ct state {established, related} accept
+        # Drop invalid packets
+        ct state invalid log prefix "WARNING - Invalid Packet: " level warn drop
 
-        meta l4proto ipv6-icmp accept # Accept ICMPv6
-		meta l4proto icmp accept # Accept ICMP
-		ip protocol igmp accept # Accept IGMP
+        # Port scan detection
+        tcp flags & (fin|syn|rst|ack) == syn ct state new \
+            add @conn_counter { ip saddr } \
+            limit rate over 10/second \
+            add @port_scanners { ip saddr } \
+            drop
 
-        tcp dport ssh ct state new limit rate 3/minute burst 10 packets accept # Rate limiting for SSH connections
+        # Drop all traffic from detected port scanners
+        ip saddr @port_scanners drop
 
-        tcp dport { http, https, 8008, 8080 } accept # Accept http/https traffic
+        # Prevent ping floods - limit rate of ICMP and ICMPv6 echo requests
+        meta l4proto icmp icmp type echo-request limit rate over 10/second burst 4 packets drop
+        meta l4proto ipv6-icmp icmpv6 type echo-request limit rate over 10/second burst 4 packets drop
 
-        udp dport mdns ip6 daddr ff02::fb accept # Accept mDNS
-		udp dport mdns ip daddr 224.0.0.251 accept # Accept mDNS
+        # Accept necessary ICMP and ICMPv6 traffic
+        meta l4proto ipv6-icmp accept
+        meta l4proto icmp accept
+        ip protocol igmp accept
 
-        udp sport bootpc udp dport bootps ip saddr 0.0.0.0 ip daddr 255.255.255.255 accept # Accept DHCPDISCOVER
-	}
-	chain forward {
-		type filter hook forward priority filter; policy drop;
-	}
-	chain output {
-		type filter hook output priority filter; policy accept;
-	}
+        # Allow all SSH connections from trusted ip's
+        tcp dport 22 ip saddr @trusted-ip accept
+        # Rate limiting for SSH connections to prevent brute force
+        tcp dport 22 ct state new limit rate 3/minute burst 10 packets accept
+        # Log and drop SSH connections that exceed the rate limit
+        tcp dport 22 log prefix "WARNING - SSH rate limiting: " level warn drop
+
+        # Accept DHCP traffic
+        udp dport { 67, 68 } accept
+        # Accept DNS traffic
+        tcp dport 53 accept
+        udp dport 53 accept
+        # Accept mDNS queries (IPv4 and IPv6)
+        udp dport mdns ip6 daddr ff02::fb accept 
+        udp dport mdns ip daddr 224.0.0.251 accept
+
+        # Service ports (uncomment as needed)
+        # tcp dport { 80, 443 } accept;  # HTTP/HTTPS
+        # tcp dport 3306 accept;  # MySQL/MariaDB
+        # tcp dport 5432 accept;  # PostgreSQL
+        # tcp dport 27017 accept;  # MongoDB
+        # tcp dport 6379 accept;  # Redis
+        # tcp dport 1521 accept;  # Oracle
+        # tcp dport 1433 accept;  # Microsoft SQL Server
+        # tcp dport 9042 accept;  # Cassandra
+        # tcp dport { 5044, 5601, 9200, 9300 } accept;  # Elasticsearch, Kibana, Logstash
+    }
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+    }
+    chain output {
+        type filter hook output priority filter; policy accept;
+    }
 }
-
-
-
-
-
-Workstation
-
-/etc/nftables.conf
-
-flush ruleset
-
-table inet my_table {
-	set LANv4 {
-		type ipv4_addr
-		flags interval
-
-		elements = { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16 }
-	}
-	set LANv6 {
-		type ipv6_addr
-		flags interval
-
-		elements = { fd00::/8, fe80::/10 }
-	}
-
-	chain my_input_lan {
-		udp sport 1900 udp dport >= 1024 meta pkttype unicast limit rate 4/second burst 20 packets accept comment "Accept UPnP IGD port mapping reply"
-
-		udp sport netbios-ns udp dport >= 1024 meta pkttype unicast accept comment "Accept Samba Workgroup browsing replies"
-
-	}
-
-	chain my_input {
-		type filter hook input priority filter; policy drop;
-
-		iif lo accept comment "Accept any localhost traffic"
-		ct state invalid drop comment "Drop invalid connections"
-		ct state established,related accept comment "Accept traffic originated from us"
-
-		meta l4proto icmp icmp type echo-request limit rate over 10/second burst 4 packets drop # No ping floods
-		meta l4proto ipv6-icmp icmpv6 type echo-request limit rate over 10/second burst 4 packets drop # No ping floods
-		ip protocol igmp accept # Accept IGMP
-
-		udp dport mdns ip6 daddr ff02::fb accept comment "Accept mDNS"
-		udp dport mdns ip daddr 224.0.0.251 accept comment "Accept mDNS"
-
-		ip6 saddr @LANv6 jump my_input_lan comment "Connections from private IP address ranges"
-		ip saddr @LANv4 jump my_input_lan comment "Connections from private IP address ranges"
-
-		counter comment "Count any other traffic"
-	}
-
-	chain my_forward {
-		type filter hook forward priority filter; policy drop;
-		# Drop everything forwarded to us. We do not forward. That is routers job.
-	}
-
-	chain my_output {
-		type filter hook output priority filter; policy accept;
-		# Accept every outbound connection
-	}
-
-}
-
-
-
-
-Server
-
-/etc/nftables.conf
-
-flush ruleset
-
-table inet my_table {
-	set LANv4 {
-		type ipv4_addr
-		flags interval
-
-		elements = { 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16 }
-	}
-	set LANv6 {
-		type ipv6_addr
-		flags interval
-
-		elements = { fd00::/8, fe80::/10 }
-	}
-
-	chain my_input_lan {
-		meta l4proto { tcp, udp } th dport 2049 accept comment "Accept NFS"
-
-		udp dport netbios-ns accept comment "Accept NetBIOS Name Service (nmbd)"
-		udp dport netbios-dgm accept comment "Accept NetBIOS Datagram Service (nmbd)"
-		tcp dport netbios-ssn accept comment "Accept NetBIOS Session Service (smbd)"
-		tcp dport microsoft-ds accept comment "Accept Microsoft Directory Service (smbd)"
-
-		udp sport { bootpc, 4011 } udp dport { bootps, 4011 } accept comment "Accept PXE"
-		udp dport tftp accept comment "Accept TFTP"
-	}
-
-	chain my_input {
-		type filter hook input priority filter; policy drop;
-
-		iif lo accept comment "Accept any localhost traffic"
-		ct state invalid drop comment "Drop invalid connections"
-		ct state established,related accept comment "Accept traffic originated from us"
-
-		meta l4proto ipv6-icmp accept comment "Accept ICMPv6"
-		meta l4proto icmp accept comment "Accept ICMP"
-		ip protocol igmp accept comment "Accept IGMP"
-
-		udp dport mdns ip6 daddr ff02::fb accept comment "Accept mDNS"
-		udp dport mdns ip daddr 224.0.0.251 accept comment "Accept mDNS"
-
-		ip6 saddr @LANv6 jump my_input_lan comment "Connections from private IP address ranges"
-		ip saddr @LANv4 jump my_input_lan comment "Connections from private IP address ranges"
-
-		tcp dport ssh accept comment "Accept SSH on port 22"
-
-		tcp dport ipp accept comment "Accept IPP/IPPS on port 631"
-
-		tcp dport { http, https, 8008, 8080 } accept comment "Accept HTTP (ports 80, 443, 8008, 8080)"
-
-		udp sport bootpc udp dport bootps ip saddr 0.0.0.0 ip daddr 255.255.255.255 accept comment "Accept DHCPDISCOVER (for DHCP-Proxy)"
-	}
-
-	chain my_forward {
-		type filter hook forward priority filter; policy drop;
-		# Drop everything forwarded to us. We do not forward. That is routers job.
-	}
-
-	chain my_output {
-		type filter hook output priority filter; policy accept;
-		# Accept every outbound connection
-	}
-
-}
-
-
-
-
-Limit rate
-
-table inet my_table {
-	chain my_input {
-		type filter hook input priority filter; policy drop;
-
-		iif lo accept comment "Accept any localhost traffic"
-		ct state invalid drop comment "Drop invalid connections"
-
-		meta l4proto icmp icmp type echo-request limit rate over 10/second burst 4 packets drop comment "No ping floods"
-		meta l4proto ipv6-icmp icmpv6 type echo-request limit rate over 10/second burst 4 packets drop comment "No ping floods"
-
-		ct state established,related accept comment "Accept traffic originated from us"
-
-		meta l4proto ipv6-icmp accept comment "Accept ICMPv6"
-		meta l4proto icmp accept comment "Accept ICMP"
-		ip protocol igmp accept comment "Accept IGMP"
-
-		tcp dport ssh ct state new limit rate 15/minute accept comment "Avoid brute force on SSH"
-
-	}
-
-}
-
-
 
 
 

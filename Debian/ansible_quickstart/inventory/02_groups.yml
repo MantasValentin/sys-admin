@@ -1,0 +1,18 @@
+all:
+  children:
+    mailservers:
+      hosts:
+        mail_1:
+    databases:
+      hosts:
+        database_1:
+    webservers:
+      hosts:
+        webserver_1:
+    proxies:
+      hosts:
+        proxy_1:
+    apiservers:
+      hosts:
+        api_1:
+

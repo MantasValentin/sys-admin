@@ -1,0 +1,22 @@
+- name: Set up automated security updates
+  hosts: servers
+  become: yes
+  tasks:
+    - name: Install unattended-upgrades package
+      apt:
+        name: unattended-upgrades
+        state: present
+        update_cache: yes
+
+    - name: Configure periodic updates
+      copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";
+
+    - name: Ensure the mail package is installed
+      apt:
+        name: mailutils
+        state: present
+        update_cache: yes

@@ -1,0 +1,37 @@
+- name: Automate server updates
+  hosts: servers
+  become: yes
+  tasks:
+    - name: Ensure the update script is present
+      copy:
+        src: /home/test/ansible_quickstart/auto-update.sh
+        dest: /usr/local/bin/auto-update.sh
+        mode: '0755'
+
+    - name: Set up a cron job for the update script
+      cron:
+        name: "Automate updates"
+        minute: "*/30"
+        job: "/usr/local/bin/auto-update.sh"
+
+    - name: Create log directory if not present
+      file:
+        path: /var/log/auto-update.log
+        state: touch
+        mode: '0644'
+
+- name: Verify update script execution
+  hosts: servers
+  become: yes
+  tasks:
+    - name: Retrieve the log file
+      fetch:
+        src: /var/log/auto-update.log
+        dest: /var/log/auto-update/{{ inventory_hostname }}.log
+        flat: yes
+
+    - name: Retrieve the error file
+      fetch:
+        src: /var/log/auto-update.err
+        dest: /var/log/auto-update/{{ inventory_hostname }}.err
+        flat: yes

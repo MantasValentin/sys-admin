@@ -26,7 +26,6 @@ sudo mv /tmp/sshd_config.tmp /etc/ssh/sshd_config
 sudo systemctl enable ssh
 sudo systemctl restart ssh
 
-
 # nftables
 echo "Configuring nftables"
 
