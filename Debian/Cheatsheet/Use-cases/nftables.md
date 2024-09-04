@@ -31,97 +31,6 @@ table inet filter {
     }
 }
 
-
-
-#!/usr/sbin/nft -f
-
-flush ruleset
-
-# Trusted ip's for less trafic restrictions
-define trusted_ips = { 0.0.0.0 }
-
-table inet filter {
-    chain input {
-        type filter hook input priority 0;
-
-        # Default policy
-        policy drop;
-
-        # Allow established/related connections
-        ct state {established, related} accept;
-
-        # Allow loopback
-        iifname "lo" accept;
-
-        # Drop invalid packets
-        ct state invalid log prefix "WARNING - Invalid Packet: " level warn drop;
-
-        # DDoS protection (SYN flood), ip based rate limiting
-        # ip saddr . ip protocol . tcp dport {
-        #    limit rate 2/second burst 10 packets;
-        # } accept; # doesn't work
-        # ip saddr @trusted_ips tcp flags & (fin|syn|rst|ack) == syn limit rate 20/second burst 100 packets accept; # doesn't work
-        ct state new tcp flags & (fin|syn|rst|ack) == syn limit rate 2/second burst 10 packets accept;        
-        ct state new tcp flags & (fin|syn|rst|ack) == syn counter log prefix "EMERGENCY - Potential DDoS: " level emerg drop;
-
-        # Protect against port scanning partialy
-        tcp flags & (fin|syn|rst|ack) == fin|syn|rst|ack log prefix "CRITICAL - Port Scan Detected: " level crit drop;
-        tcp flags & (fin|syn|rst|ack) == 0 log prefix "CRITICAL - Port Scan Detected: " level crit drop;
-
-        # Ip based rate limiting for SSH connections
-        # ip saddr @trusted_ips tcp dport 22 ct state new limit rate 10/minute burst 10 packets accept; # doesn't work
-        tcp dport 22 ct state new limit rate 3/minute burst 5 packets log prefix "INFO - New SSH Connection: " level info accept;
-        tcp dport 22 log prefix "Warning - Failed SSH Connection: " level warn drop;
-
-        # Service ports (uncomment as needed)
-        # tcp dport {80, 443} accept;  # HTTP/HTTPS
-        # udp dport 53 accept;  # DNS
-        # tcp dport 53 accept;  # DNS
-        # udp dport {67, 68} accept;  # DHCP: 67 for server, 68 for client
-        # tcp dport 3306 accept;  # MySQL/MariaDB
-        # tcp dport 5432 accept;  # PostgreSQL
-        # tcp dport 27017 accept;  # MongoDB
-        # tcp dport 6379 accept;  # Redis
-        # tcp dport 1521 accept;  # Oracle
-        # tcp dport 1433 accept;  # Microsoft SQL Server
-        # tcp dport 9042 accept;  # Cassandra
-        # tcp dport { 5044, 5601, 9200, 9300} accept;  # Elasticsearch, Kibana, Logstash
-
-        # Allow ICMP (ping)
-        icmp type { echo-request, destination-unreachable, time-exceeded } limit rate 1/second accept;
-        icmp type { echo-request, destination-unreachable, time-exceeded } log prefix "WARNING - High ICMP Rate: " level warn drop;
-
-        # Log dropped packets
-        log prefix "nftables-Dropped: " level debug drop;
-    }
-}
-
-#!/usr/sbin/nft -f
-
-flush ruleset
-
-# Trusted ip's for less trafic restrictions
-define trusted_ips = { 0.0.0.0 }
-
-table inet filter {
-    chain input {
-        type filter hook input priority filter; policy drop;
-
-        # DDoS protection (SYN flood), ip based rate limiting
-        # ip saddr . ip protocol . tcp dport {
-        #    limit rate 2/second burst 10 packets;
-        # } accept; # doesn't work
-        # ip saddr @trusted_ips tcp flags & (fin|syn|rst|ack) == syn limit rate 20/second burst 100 packets accept; # doesn't work
-        ct state new tcp flags & (fin|syn|rst|ack) == syn limit rate 2/second burst 10 packets accept;        
-        ct state new tcp flags & (fin|syn|rst|ack) == syn counter log prefix "EMERGENCY - Potential DDoS: " level emerg drop;
-
-        # Protect against port scanning partialy
-        tcp flags & (fin|syn|rst|ack) == fin|syn|rst|ack log prefix "CRITICAL - Port Scan Detected: " level crit drop;
-        tcp flags & (fin|syn|rst|ack) == 0 log prefix "CRITICAL - Port Scan Detected: " level crit drop;
-    }
-}
-
-
 #!/usr/sbin/nft -f
 
 flush ruleset
@@ -132,7 +41,7 @@ table inet filter {
         type ipv4_addr
         size 65536
         flags dynamic,timeout
-        timeout 10m
+        timeout 1d
     }
 
     # Set for counting connection attempts per IP
@@ -159,9 +68,12 @@ table inet filter {
         # Drop invalid packets
         ct state invalid log prefix "WARNING - Invalid Packet: " level warn drop
 
+        # Allow all connections from trusted ip's
+        ip saddr @trusted-ip accept
+
         # Port scan detection
         tcp flags & (fin|syn|rst|ack) == syn ct state new \
-            add @conn_counter { ip saddr } \
+            add @conn_counter { ip saddr counter } \
             limit rate over 10/second \
             add @port_scanners { ip saddr } \
             drop
@@ -178,8 +90,6 @@ table inet filter {
         meta l4proto icmp accept
         ip protocol igmp accept
 
-        # Allow all SSH connections from trusted ip's
-        tcp dport 22 ip saddr @trusted-ip accept
         # Rate limiting for SSH connections to prevent brute force
         tcp dport 22 ct state new limit rate 3/minute burst 10 packets accept
         # Log and drop SSH connections that exceed the rate limit
@@ -191,8 +101,8 @@ table inet filter {
         tcp dport 53 accept
         udp dport 53 accept
         # Accept mDNS queries (IPv4 and IPv6)
-        udp dport mdns ip6 daddr ff02::fb accept 
-        udp dport mdns ip daddr 224.0.0.251 accept
+        udp dport 5353 ip6 daddr ff02::fb accept 
+        udp dport 5353 ip daddr 224.0.0.251 accept
 
         # Service ports (uncomment as needed)
         # tcp dport { 80, 443 } accept;  # HTTP/HTTPS
