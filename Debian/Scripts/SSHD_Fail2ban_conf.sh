@@ -28,6 +28,17 @@ sudo awk '
 ' /etc/ssh/sshd_config > /tmp/sshd_config.tmp 
 sudo mv /tmp/sshd_config.tmp /etc/ssh/sshd_config
 
+## Specify secure algorithms used for ssh
+sudo tee -a /etc/ssh/sshd_config > /dev/null <<EOT
+KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org,diffie-hellman-group-exchange-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,diffie-hellman-group14-sha256
+
+HostKeyAlgorithms rsa-sha2-512,rsa-sha2-256,ssh-ed25519
+
+Ciphers aes256-ctr,aes256-gcm@openssh.com,chacha20-poly1305@openssh.com
+
+MACs hmac-sha2-512-etm@openssh.com,hmac-sha2-256-etm@openssh.com,umac-128-etm@openssh.com
+EOT
+
 ## Start SSH server 
 sudo systemctl enable ssh
 sudo systemctl restart ssh

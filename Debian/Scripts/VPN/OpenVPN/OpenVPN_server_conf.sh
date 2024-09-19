@@ -37,21 +37,24 @@ sudo cp ./pki/ca.crt ./pki/issued/server.crt ./pki/private/server.key ./pki/dh.p
 sudo tee /etc/openvpn/server.conf > /dev/null <<EOT
 server 10.1.0.0 255.255.255.0
 port 1194
-proto udp
+proto tcp
 dev tun
 tls-server
+
 key /etc/openvpn/server/server.key
 cert /etc/openvpn/server/server.crt
 dh /etc/openvpn/server/dh.pem
 ca /etc/openvpn/server/ca.crt
 tls-auth /etc/openvpn/server/ta.key 0
+
 push "redirect-gateway def1 bypass-dhcp"
 keepalive 10 120
 user nobody
 group nogroup
 persist-key
 persist-tun
-status openvpn-status.log
+
+status /var/log/openvpn-status.log
 log-append /var/log/openvpn.log
 verb 3
 EOT
