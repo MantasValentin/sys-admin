@@ -5,6 +5,7 @@
 - With home directory: `useradd -m username`
 - Specify home directory: `useradd -m -d /path/to/home username`
 - With specific user ID: `useradd -u 1500 username`
+- With specific shell: `useradd -s /bin/bash username`
 
 ## Delete a user
 `userdel username`
