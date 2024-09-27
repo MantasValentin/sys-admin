@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Update package lists
-sudo apt-get update
+sudo dnf update
 
 # Install OpenVPN and Easy-RSA
-sudo apt install openvpn easy-rsa -y
+sudo dnf -y install epel-release
+sudo dnf -y install openvpn easy-rsa
 
 # Create a directory for OpenVPN server configuration
 sudo mkdir /etc/openvpn/server
