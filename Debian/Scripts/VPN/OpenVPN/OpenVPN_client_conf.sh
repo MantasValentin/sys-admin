@@ -27,7 +27,7 @@ CLIENT_KEY=$(cat /etc/openvpn/server/easy-rsa/pki/private/$CLIENT_NAME.key)
 sudo tee /etc/openvpn/client/$CLIENT_NAME.ovpn > /dev/null <<EOT
 client
 dev tun
-proto udp
+proto tcp
 remote $SERVER_IP 1194
 resolv-retry infinite
 nobind

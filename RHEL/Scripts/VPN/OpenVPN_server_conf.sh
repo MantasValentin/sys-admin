@@ -35,36 +35,40 @@ sudo cp ./pki/ca.crt ./pki/issued/server.crt ./pki/private/server.key ./pki/dh.p
 
 # Create OpenVPN server configuration file
 sudo tee /etc/openvpn/server.conf > /dev/null <<EOT
+server 10.1.0.0 255.255.255.0
 port 1194
-proto udp
+proto tcp
 dev tun
 tls-server
+
 key /etc/openvpn/server/server.key
 cert /etc/openvpn/server/server.crt
 dh /etc/openvpn/server/dh.pem
 ca /etc/openvpn/server/ca.crt
 tls-auth /etc/openvpn/server/ta.key 0
+
 push "redirect-gateway def1 bypass-dhcp"
-push "dhcp-option DNS 8.8.8.8"
-push "dhcp-option DNS 8.8.4.4"
 keepalive 10 120
 user nobody
-group nogroup
+group nobody
 persist-key
 persist-tun
-status openvpn-status.log
+
+status /var/log/openvpn-status.log
 log-append /var/log/openvpn.log
 verb 3
 EOT
 
 # Enable IP forwarding by uncommenting the line in sysctl.conf
-sudo sed -i "s/^#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/" /etc/sysctl.conf
+sudo tee /etc/sysctl.conf > /dev/null <<EOT 
+net.ipv4.ip_forward=1
+EOT
 
 # Apply the sysctl changes
 sudo sysctl -p
 
 # Start the OpenVPN server service
-sudo systemctl start openvpn@server
+sudo systemctl start openvpn-server@server.service
 
 # Enable the OpenVPN server service to start on boot
-sudo systemctl enable openvpn@server
+sudo systemctl enable openvpn-server@server.service

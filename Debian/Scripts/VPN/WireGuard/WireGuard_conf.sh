@@ -9,6 +9,8 @@ if [ "$#" -ne 2 ]; then
     exit 1
 fi
 
+sudo apt install wireguard -y
+
 # Generate random numbers for the client's VPN IP (10.0.0.0/8 range)
 OCTET2=$(( (RANDOM % 254) + 1 )) # Ensure range is 1-254
 OCTET3=$(( (RANDOM % 254) + 1 )) # Ensure range is 1-254
@@ -17,7 +19,7 @@ OCTET4=$(( (RANDOM % 253) + 2 )) # Ensure range is 2-254
 SERVER_IP=$1
 NETWORK_INTERFACE=$2
 CLIENT_VPN_IP="10.$OCTET2.$OCTET3.$OCTET4/32"
-SERVER_VPN_IP="10.0.0.1/8" # Change this as necessary
+SERVER_VPN_IP="10.0.0.1/8"
 
 # Check if the WireGuard config file exists and create one if it doesn't
 if [ ! -e "/etc/wireguard/wg0.conf" ]; then

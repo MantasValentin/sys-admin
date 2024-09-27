@@ -85,6 +85,7 @@ iface $INTERFACE inet static
 ## Append the configuration to the file using tee -a
 echo "$config" | sudo tee -a "/etc/network/interfaces"
 
+sudo dhclient
 sudo dhclient -r
 
 sudo systemctl restart networking

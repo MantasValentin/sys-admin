@@ -19,7 +19,7 @@ table inet filter {
 		type filter hook input priority filter;
 	}
 	chain forward {
-		type filter hook forward priority filter; policy accept;
+		type filter hook forward priority filter; policy drop;
 		ip saddr 192.168.0.0/24 ip daddr 192.168.1.0/24 accept
         ip saddr 192.168.1.0/24 ip daddr 192.168.0.0/24 accept
 	}
