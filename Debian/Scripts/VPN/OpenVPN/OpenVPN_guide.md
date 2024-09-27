@@ -28,26 +28,28 @@ sudo cp pki/ca.crt pki/issued/server.crt pki/private/server.key pki/dh.pem /etc/
 sudo openvpn --genkey --secret /etc/openvpn/server/ta.key
 
 # Create the OpenVPN server configuration file:
-sudo nano /etc/openvpn/server/server.conf
+sudo vim /etc/openvpn/server/server.conf
 
+server 10.1.0.0 255.255.255.0
 port 1194
-proto udp
+proto tcp
 dev tun
 tls-server
-key server.key
-cert server.crt
-dh dh.pem
-ca ca.crt
-tls-auth ta.key 0
+
+key /etc/openvpn/server/server.key
+cert /etc/openvpn/server/server.crt
+dh /etc/openvpn/server/dh.pem
+ca /etc/openvpn/server/ca.crt
+tls-auth /etc/openvpn/server/ta.key 0
+
 push "redirect-gateway def1 bypass-dhcp"
-push "dhcp-option DNS 8.8.8.8"
-push "dhcp-option DNS 8.8.4.4"
 keepalive 10 120
 user nobody
 group nogroup
 persist-key
 persist-tun
-status openvpn-status.log
+
+status /var/log/openvpn-status.log
 log-append /var/log/openvpn.log
 verb 3
 
@@ -151,3 +153,54 @@ sudo ./easyrsa sign-req client client1
 sudo ./easyrsa build-client-full CLIENT_NAME nopass
 
 sudo ./easyrsa build-server-full SERVER_NAME nopass
+
+
+
+######################################################
+
+openvpn@.service
+
+[Unit]
+Description=OpenVPN connection to %i
+PartOf=openvpn.service
+Before=systemd-user-sessions.service
+After=network-online.target
+Wants=network-online.target
+Documentation=man:openvpn(8)
+Documentation=https://community.openvpn.net/openvpn/wiki/Openvpn24ManPage
+Documentation=https://community.openvpn.net/openvpn/wiki/HOWTO
+
+[Service]
+Type=notify
+PrivateTmp=true
+WorkingDirectory=/etc/openvpn
+ExecStart=/usr/sbin/openvpn --daemon ovpn-%i --status /run/openvpn/%i.status 10>
+PIDFile=/run/openvpn/%i.pid
+KillMode=process
+CapabilityBoundingSet=CAP_IPC_LOCK CAP_NET_ADMIN CAP_NET_BIND_SERVICE CAP_NET_R>
+TasksMax=10
+DeviceAllow=/dev/null rw
+DeviceAllow=/dev/net/tun rw
+ProtectSystem=true
+ProtectHome=true
+RestartSec=5s
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
+
+openvpn.service
+
+[Unit]
+Description=OpenVPN service
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+WorkingDirectory=/etc/openvpn
+
+[Install]
+WantedBy=multi-user.target

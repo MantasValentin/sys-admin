@@ -7,6 +7,11 @@ openssl req -new -key private.key -out request.csr
 # Signing the CSR with your CA:
 openssl x509 -req -in request.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out signed_cert.crt -days 365
 
+# Display information about the certificate
+openssl x509 -in <ca.crt> -text -noout
+
+# Display encrypted private key 
+openssl pkey -check -in <ca.key>
 
 
 

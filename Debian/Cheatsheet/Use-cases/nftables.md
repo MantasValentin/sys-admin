@@ -72,9 +72,9 @@ table inet filter {
         ip saddr @trusted-ip accept
 
         # Port scan detection
-        tcp flags & (fin|syn|rst|ack) == syn ct state new \
+        tcp ct state new, untracked \
             add @conn_counter { ip saddr counter } \
-            limit rate over 10/second \
+            limit rate over 10/minute \
             add @port_scanners { ip saddr } \
             drop
 
