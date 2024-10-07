@@ -7,6 +7,8 @@
 - With specific user ID: `useradd -u 1500 username`
 - With specific shell: `useradd -s /bin/bash username`
 
+sudo useradd -m -s /bin/bash -d /home/<username> <username>
+
 ## Delete a user
 `userdel username`
 - Delete user and home directory: `userdel -r username`

@@ -67,6 +67,12 @@ EOT
 # Apply the sysctl changes
 sudo sysctl -p
 
+# Set up firewall rules
+sudo firewall-cmd --permanent --add-service=openvpn
+sudo firewall-cmd --permanent --add-masquerade
+sudo firewall-cmd --permanent --direct --passthrough ipv4 -t nat -A POSTROUTING -s 10.1.0.0/24 -o ens33 -j MASQUERADE
+sudo firewall-cmd --reload
+
 # Start the OpenVPN server service
 sudo systemctl start openvpn-server@server.service
 
